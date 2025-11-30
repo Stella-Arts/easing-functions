@@ -1,65 +1,185 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useRef } from 'react';
+import { motion } from 'motion/react';
+import { Slider } from './components/Slider';
+
+const easings = [
+  { 
+    name: 'Linear', 
+    id: 'linear', 
+    fn: (t: number) => t 
+  },
+  { 
+    name: 'Ease In (Quad)', 
+    id: 'easeIn', 
+    fn: (t: number) => t * t 
+  },
+  { 
+    name: 'Ease Out (Quad)', 
+    id: 'easeOut', 
+    fn: (t: number) => t * (2 - t) 
+  },
+  { 
+    name: 'Ease In Out (Quad)', 
+    id: 'easeInOut', 
+    fn: (t: number) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t 
+  },
+  { 
+    name: 'Circ In', 
+    id: 'circIn', 
+    fn: (t: number) => 1 - Math.sqrt(1 - t * t) 
+  },
+  { 
+    name: 'Circ Out', 
+    id: 'circOut', 
+    fn: (t: number) => Math.sqrt(1 - Math.pow(t - 1, 2)) 
+  },
+  { 
+    name: 'Back In', 
+    id: 'backIn', 
+    fn: (t: number) => { const c1 = 1.70158; const c3 = c1 + 1; return c3 * t * t * t - c1 * t * t; } 
+  },
+  { 
+    name: 'Back Out', 
+    id: 'backOut', 
+    fn: (t: number) => { const c1 = 1.70158; const c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); } 
+  },
+  { 
+    name: 'Anticipate', 
+    id: 'anticipate', 
+    fn: (t: number) => { 
+        return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1; 
+    } 
+  }
+];
 
 export default function Home() {
+  const [selectedEasingId, setSelectedEasingId] = useState('easeInOut');
+  const [duration, setDuration] = useState(1.5);
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  const selectedEasing = easings.find(e => e.id === selectedEasingId) || easings[0];
+
+  const generatePath = () => {
+    const points = [];
+    const steps = 100;
+    const width = 400;
+    const height = 200;
+    const padding = 20;
+    const plotWidth = width - padding * 2;
+    const plotHeight = height - padding * 2;
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const value = selectedEasing.fn(t);
+      
+      const x = padding + t * plotWidth;
+      const y = height - (padding + value * plotHeight);
+      
+      points.push(`${x},${y}`);
+    }
+    return `M ${points.join(' L ')}`;
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen flex flex-col items-center justify-center p-8 gap-8 text-white relative overflow-hidden font-sans" style={{ backgroundColor: 'var(--background)' }}>
+      
+      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" 
+           style={{ 
+             backgroundImage: 'linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px)',
+             backgroundSize: '40px 40px'
+           }} 
+      />
+
+      <div className="z-10 flex flex-col items-center gap-8 max-w-4xl w-full">
+        <h1 className="text-4xl font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50">
+          Easing Functions
+        </h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 w-full">
+          
+          <div className="flex flex-col gap-6">
+            
+            <div className="relative bg-zinc-900/50 border border-white/10 rounded-xl p-6 backdrop-blur-sm shadow-2xl">
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-4">Curve</div>
+              <svg width="100%" height="200" viewBox="0 0 400 200" className="overflow-visible">
+                <line x1="20" y1="180" x2="380" y2="180" stroke="#333" strokeWidth="1" />
+                <line x1="20" y1="180" x2="20" y2="20" stroke="#333" strokeWidth="1" />
+                
+                <motion.path
+                  d={generatePath()}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="2"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                  key={selectedEasingId}
+                />
+              </svg>
+            </div>
+
+            <div className="relative bg-zinc-900/50 border border-white/10 rounded-xl p-6 backdrop-blur-sm shadow-2xl h-32 flex flex-col justify-center">
+              <div className="text-xs text-gray-500 uppercase tracking-widest mb-4">Motion</div>
+              <div ref={trackRef} className="relative w-full h-8 bg-white/5 rounded-full overflow-hidden">
+                 <motion.div
+                    className="absolute top-1 w-6 h-6 bg-white rounded-full"
+                    animate={{ 
+                      left: trackRef.current 
+                        ? [`0.25rem`, `${trackRef.current.offsetWidth - 1.75 * 16}px`]
+                        : [`0.25rem`, `calc(100% - 1.75rem)`]
+                    }}
+                    transition={{
+                      duration: duration,
+                      ease: selectedEasing.id as any,
+                      repeat: Infinity,
+                      repeatDelay: 0.5,
+                      repeatType: "reverse"
+                    }}
+                    key={`${selectedEasingId}-${duration}`}
+                 />
+              </div>
+            </div>
+
+          </div>
+
+          <div className="flex flex-col gap-8">
+            
+            <div className="flex flex-col gap-3">
+              <label className="text-xs text-gray-500 uppercase tracking-widest">Select Easing</label>
+              <div className="grid grid-cols-2 gap-2">
+                {easings.map((e) => (
+                  <button
+                    key={e.id}
+                    onClick={() => setSelectedEasingId(e.id)}
+                    className={`
+                      px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-left
+                      ${selectedEasingId === e.id 
+                        ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]' 
+                        : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'}
+                    `}
+                  >
+                    {e.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-6 p-6 bg-zinc-900/30 border border-white/5 rounded-xl">
+               <Slider 
+                 label="Duration (s)" 
+                 value={duration} 
+                 onChange={setDuration} 
+                 min={0.5} 
+                 max={5} 
+                 step={0.1} 
+               />
+            </div>
+
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
