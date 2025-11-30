@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Slider } from './components/Slider';
 
@@ -52,16 +52,31 @@ const easings = [
         return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1; 
     } 
   }
-];
+] as const;
 
 export default function Home() {
   const [selectedEasingId, setSelectedEasingId] = useState('easeInOut');
   const [duration, setDuration] = useState(1.5);
+  const [trackWidth, setTrackWidth] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
 
   const selectedEasing = easings.find(e => e.id === selectedEasingId) || easings[0];
 
-  const generatePath = () => {
+  // Measure track width on mount and resize
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const measure = () => setTrackWidth(track.offsetWidth);
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, []);
+
+  // Memoize expensive path calculation
+  const curvePath = useMemo(() => {
     const points = [];
     const steps = 100;
     const width = 400;
@@ -73,14 +88,16 @@ export default function Home() {
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const value = selectedEasing.fn(t);
-      
       const x = padding + t * plotWidth;
       const y = height - (padding + value * plotHeight);
-      
       points.push(`${x},${y}`);
     }
     return `M ${points.join(' L ')}`;
-  };
+  }, [selectedEasing]);
+
+  const ballSize = 24; // 1.5rem = 24px
+  const padding = 4;   // 0.25rem = 4px
+  const travelDistance = trackWidth - ballSize - padding * 2;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 gap-8 text-white relative overflow-hidden font-sans" style={{ backgroundColor: 'var(--background)' }}>
@@ -108,7 +125,7 @@ export default function Home() {
                 <line x1="20" y1="180" x2="20" y2="20" stroke="#333" strokeWidth="1" />
                 
                 <motion.path
-                  d={generatePath()}
+                  d={curvePath}
                   fill="none"
                   stroke="white"
                   strokeWidth="2"
@@ -123,22 +140,20 @@ export default function Home() {
             <div className="relative bg-zinc-900/50 border border-white/10 rounded-xl p-6 backdrop-blur-sm shadow-2xl h-32 flex flex-col justify-center">
               <div className="text-xs text-gray-500 uppercase tracking-widest mb-4">Motion</div>
               <div ref={trackRef} className="relative w-full h-8 bg-white/5 rounded-full overflow-hidden">
-                 <motion.div
-                    className="absolute top-1 w-6 h-6 bg-white rounded-full"
-                    animate={{ 
-                      left: trackRef.current 
-                        ? [`0.25rem`, `${trackRef.current.offsetWidth - 1.75 * 16}px`]
-                        : [`0.25rem`, `calc(100% - 1.75rem)`]
-                    }}
+                {trackWidth > 0 && (
+                  <motion.div
+                    className="absolute top-1 left-1 w-6 h-6 bg-white rounded-full"
+                    animate={{ x: [0, travelDistance] }}
                     transition={{
-                      duration: duration,
-                      ease: selectedEasing.id as any,
+                      duration,
+                      ease: selectedEasing.id,
                       repeat: Infinity,
                       repeatDelay: 0.5,
                       repeatType: "reverse"
                     }}
-                    key={`${selectedEasingId}-${duration}`}
-                 />
+                    key={`${selectedEasingId}-${duration}-${trackWidth}`}
+                  />
+                )}
               </div>
             </div>
 
